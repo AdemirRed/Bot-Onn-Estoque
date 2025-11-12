@@ -175,17 +175,31 @@ function logWebhookEvent(sessionId, eventType, data) {
             } else {
               // Resultado normal — envia a resposta
               if (firstResult && firstResult.message) {
-                // Registra no cache antes de enviar
-                const messageKey = `${sessionId}:${msgData.from}:${firstResult.message}`;
-                sentMessagesCache.set(messageKey, Date.now());
-                
-                // Responde a mensagem original
-                if (messageId) {
-                  await messageService.replyToMessage(sessionId, msgData.from, messageId, firstResult.message);
+                // Verifica se é relatório ou lista de materiais
+                if ((firstResult.type === 'report' || firstResult.type === 'material_list') && firstResult.filepath) {
+                  // Envia arquivo (HTML para relatório, PDF para lista)
+                  try {
+                    await messageService.sendDocument(sessionId, msgData.from, firstResult.filepath, firstResult.message);
+                    const docType = firstResult.type === 'report' ? 'Relatório' : 'Lista';
+                    console.log(`│ 📄 ${docType} enviado para ${msgData.from}`);
+                  } catch (error) {
+                    console.error(`│ ❌ Erro ao enviar documento:`, error.message);
+                    // Se falhar, envia mensagem de texto
+                    await messageService.sendTextMessage(sessionId, msgData.from, firstResult.message);
+                  }
                 } else {
-                  await messageService.sendTextMessage(sessionId, msgData.from, firstResult.message);
+                  // Registra no cache antes de enviar
+                  const messageKey = `${sessionId}:${msgData.from}:${firstResult.message}`;
+                  sentMessagesCache.set(messageKey, Date.now());
+                  
+                  // Responde a mensagem original
+                  if (messageId) {
+                    await messageService.replyToMessage(sessionId, msgData.from, messageId, firstResult.message);
+                  } else {
+                    await messageService.sendTextMessage(sessionId, msgData.from, firstResult.message);
+                  }
+                  console.log(`│ ✅ Resposta enviada para ${msgData.from}`);
                 }
-                console.log(`│ ✅ Resposta enviada para ${msgData.from}`);
               }
             }
           } catch (error) {

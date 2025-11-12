@@ -6,6 +6,8 @@ class MessageAnalyzerService {
     // Palavras-chave para identificar intenção
     this.chapaKeywords = ['chapa', 'chapas', 'placa', 'placas', 'inteira', 'inteiras'];
     this.retalhoKeywords = ['retalho', 'retalhos', 'sobra', 'sobras', 'resto', 'restos'];
+    this.reportKeywords = ['relatorio', 'relatório', 'relacao', 'relação', 'listagem', 'inventario', 'inventário'];
+    this.listKeywords = ['lista', 'lista de materiais', 'listar', 'imprimir', 'imprimir lista'];
     
     // Espessuras comuns
     this.commonThicknesses = [6, 9, 15, 18, 25];
@@ -24,6 +26,8 @@ class MessageAnalyzerService {
       espessura: this.extractThickness(normalized),
       tipo: this.extractType(normalized),
       isNumericSelection: this.isNumericSelection(normalized),
+      isReportRequest: this.isReportRequest(normalized),
+      isListRequest: this.isListRequest(normalized),
       selectedNumber: this.extractNumber(normalized),
       originalMessage: message
     };
@@ -47,7 +51,10 @@ class MessageAnalyzerService {
       'tem', 'preciso', 'quero', 'gostaria', 'inteira', 'inteiras',
       'para', 'de', 'em', 'com', 'o', 'a', 'os', 'as',
       'do', 'da', 'dos', 'das', 'no', 'na', 'nos', 'nas',
-      'por', 'pelo', 'pela', 'pelos', 'pelas'
+      'por', 'pelo', 'pela', 'pelos', 'pelas',
+      // Palavras de comando
+      'relatorio', 'relatório', 'relacao', 'relação', 'listagem', 
+      'inventario', 'inventário', 'lista', 'listar', 'imprimir'
     ];
     
     // Remove a espessura e palavras-chave de contexto
@@ -144,6 +151,32 @@ class MessageAnalyzerService {
   isNumericSelection(normalized) {
     // Aceita: "1", "2", "opcao 1", "numero 2", etc
     return /^(opcao\s+)?(\d+)$|^numero\s+(\d+)$/i.test(normalized.trim());
+  }
+
+  /**
+   * Verifica se é solicitação de relatório
+   * @param {string} normalized - Mensagem normalizada
+   * @returns {boolean}
+   */
+  isReportRequest(normalized) {
+    return this.reportKeywords.some(keyword => normalized.includes(keyword));
+  }
+
+  /**
+   * Verifica se é solicitação de lista de materiais
+   * @param {string} normalized - Mensagem normalizada
+   * @returns {boolean}
+   */
+  isListRequest(normalized) {
+    // Verifica se contém palavras de lista E não contém palavra de relatório
+    // Isso permite que "lista" seja usada para lista de materiais
+    // e "relatorio" para relatório de estoque
+    const hasListKeyword = this.listKeywords.some(keyword => normalized.includes(keyword));
+    const hasReportKeyword = this.reportKeywords.some(keyword => normalized.includes(keyword));
+    
+    // Se tiver palavra de lista E não tiver palavra de relatório, é lista de materiais
+    // Se tiver ambas, prioriza relatório
+    return hasListKeyword && !hasReportKeyword;
   }
 
   /**

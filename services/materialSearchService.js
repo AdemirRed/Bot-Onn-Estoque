@@ -1,6 +1,8 @@
 const corteCertoService = require('./corteCertoService');
 const messageAnalyzerService = require('./messageAnalyzerService');
 const userStateService = require('./userStateService');
+const reportService = require('./reportService');
+const materialListService = require('./materialListService');
 
 /**
  * Serviço de busca inteligente de materiais
@@ -111,7 +113,7 @@ class MaterialSearchService {
       }
     }
 
-    // Busca normal de material
+    // Busca normal de material ou relatório
     return await this.searchMaterial(from, sessionId, analysis);
   }
 
@@ -123,7 +125,17 @@ class MaterialSearchService {
    * @returns {Promise<Object>}
    */
   async searchMaterial(from, sessionId, analysis) {
-    const { cor, espessura, tipo } = analysis;
+    const { cor, espessura, tipo, isReportRequest, isListRequest } = analysis;
+
+    // Se é solicitação de relatório
+    if (isReportRequest) {
+      return await this.startReportFlow(from, sessionId, analysis);
+    }
+
+    // Se é solicitação de lista de materiais
+    if (isListRequest) {
+      return await this.startListFlow(from, sessionId, analysis);
+    }
 
     // Valida se tem informação mínima
     if (!cor) {
@@ -559,6 +571,77 @@ class MaterialSearchService {
   }
 
   /**
+   * Inicia fluxo de geração de relatório
+   */
+  async startReportFlow(from, sessionId, analysis) {
+    const { cor, espessura, tipo, originalMessage } = analysis;
+    
+    // Se enviou apenas "relatorio" (sem números, sem tipo específico), mostra instruções
+    const normalizedMsg = originalMessage.toLowerCase().trim();
+    const isOnlyReport = /^relat[oó]rio?$/i.test(normalizedMsg) || /^rela[cç][aã]o$/i.test(normalizedMsg);
+    
+    if (isOnlyReport) {
+      return {
+        type: 'report_help',
+        message: this.getReportHelpMessage()
+      };
+    }
+    
+    try {
+      const report = await reportService.generateReport({
+        material: null,
+        cor: cor || null,  // Passa a cor para buscar por nome
+        espessura: espessura || null,
+        tipo: tipo === 'chapa' ? 'chapa' : tipo === 'retalho' ? 'retalho' : 'ambos'
+      });
+
+      return {
+        type: 'report',
+        filepath: report.filepath,
+        filename: report.filename,
+        message: `📊 *Relatório de Estoque*\n\n${report.summary}`
+      };
+    } catch (error) {
+      console.error('Erro ao gerar relatório:', error);
+      return {
+        type: 'error',
+        message: `❌ Erro ao gerar relatório: ${error.message}`
+      };
+    }
+  }
+
+  /**
+   * Inicia fluxo de geração de lista de materiais
+   */
+  async startListFlow(from, sessionId, analysis) {
+    const { espessura, originalMessage } = analysis;
+    
+    // Sempre gera a lista, com ou sem espessura
+    try {
+      const list = await materialListService.generateMaterialList({
+        espessura: espessura || null
+      });
+
+      const summaryText = espessura 
+        ? `Espessura: ${espessura}mm\nTotal: ${list.summary.total} materiais`
+        : `Total: ${list.summary.total} materiais`;
+
+      return {
+        type: 'material_list',
+        filepath: list.filepath,
+        filename: list.filename,
+        message: `📋 *Lista de Materiais*\n\n${summaryText}\n\n📄 _Arquivo PDF gerado para impressão_`
+      };
+    } catch (error) {
+      console.error('Erro ao gerar lista:', error);
+      return {
+        type: 'error',
+        message: `❌ Erro ao gerar lista: ${error.message}`
+      };
+    }
+  }
+
+  /**
    * Limpa contextos expirados (executa periodicamente)
    */
   cleanupExpiredContexts() {
@@ -587,6 +670,49 @@ class MaterialSearchService {
            `Exemplo: "Branco Liso 18mm" ou "Noite Guara 18"\n\n` +
            `🔍 *Dica:* Se não souber a espessura exata, envie apenas o nome do material e eu mostro as opções disponíveis!\n\n` +
            `Pronto para começar? Envie sua consulta! 🚀`;
+  }
+
+  /**
+   * Mensagem de ajuda para relatórios
+   */
+  getReportHelpMessage() {
+    return `📊 *Como Gerar Relatórios de Estoque*\n\n` +
+           `Você pode solicitar relatórios detalhados do estoque com os seguintes comandos:\n\n` +
+           `📋 *Exemplos:*\n\n` +
+           `🔹 *Por cor/material:*\n` +
+           `• "relatorio Branco Liso" - Material específico\n` +
+           `• "relatorio Noite Guara" - Busca por nome\n\n` +
+           `🔹 *Por espessura:*\n` +
+           `• "relatorio 18" - Todos materiais de 18mm\n` +
+           `• "relatorio 6mm" - Todos materiais de 6mm\n\n` +
+           `🔹 *Por tipo:*\n` +
+           `• "relatorio retalhos" - Somente retalhos\n` +
+           `• "relatorio chapas" - Somente chapas\n\n` +
+           `🔹 *Combinado:*\n` +
+           `• "relatorio Branco Liso 18" - Material e espessura\n` +
+           `• "relatorio retalhos 18" - Retalhos de 18mm\n` +
+           `• "relatorio chapas 6" - Chapas de 6mm\n\n` +
+           `📄 O relatório será enviado como arquivo HTML que você pode abrir no celular ou PC!\n\n` +
+           `💡 *Dica:* O relatório contém informações detalhadas de dimensões, quantidades e áreas.`;
+  }
+
+  /**
+   * Mensagem de ajuda para lista de materiais
+   */
+  getListHelpMessage() {
+    return `📋 *Como Gerar Lista de Materiais*\n\n` +
+           `Gere uma lista completa de materiais ordenada alfabeticamente (código = nome) para impressão.\n\n` +
+           `📝 *Exemplos:*\n\n` +
+           `🔹 *Lista completa:*\n` +
+           `• "lista" - Todos os materiais\n` +
+           `• "listar" - Todos os materiais\n` +
+           `• "imprimir lista" - Todos os materiais\n\n` +
+           `🔹 *Lista por espessura:*\n` +
+           `• "lista 18" - Somente materiais de 18mm\n` +
+           `• "lista 6mm" - Somente materiais de 6mm\n` +
+           `• "imprimir lista 25" - Somente materiais de 25mm\n\n` +
+           `📄 A lista será enviada como arquivo PDF pronto para impressão!\n\n` +
+           `💡 *Formato:* código = nome espessura (ex: 216 = AZUL PROFUNDO 18mm)`;
   }
 }
 

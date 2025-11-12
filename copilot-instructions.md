@@ -14,6 +14,8 @@
 - Sempre usar o Invoke-WebRequest ao invez do curl no powershell
 
 ## Obrigatorio seguir
+- O usuario não gosta de arquivos de documentação separados, use Swagger para documentar APIs. ou crie uma pasta para documentações.
+- Sempre remover testes antigos que não são mais necessários e novos que não serão usados.
 - Sempre siga as regras específicas para WhatsApp API, Swagger e Audio/Transcription abaixo.
 - Sempre valide os dados de entrada e saída das funções.
 - Use mensagens de erro claras e consistentes.
