@@ -1,26 +1,9 @@
-require('dotenv').config();
+'use strict';
 
-/**
- * Configurações centralizadas da aplicação
- * Carrega variáveis de ambiente e define valores padrão
- */
-module.exports = {
-  // Configurações do servidor
-  port: process.env.PORT || 3000,
-  nodeEnv: process.env.NODE_ENV || 'development',
-  
-  // Segurança
-  apiKey: process.env.API_KEY || 'sua_chave_aqui_mudeme',
-  
-  // API WhatsApp externa
-  whatsappApiUrl: process.env.WHATSAPP_API_URL || 'http://localhost:3000',
-  
-  // Sessões para monitorar
-  monitoredSessions: process.env.MONITORED_SESSIONS 
-    ? process.env.MONITORED_SESSIONS.split(',').map(s => s.trim())
-    : [],
-  
-  // BipText
-  bipTextNumber: process.env.BIPTEXT_NUMBER || '553172280540@c.us',
-  transcriptionTimeout: parseInt(process.env.TRANSCRIPTION_TIMEOUT) || 120000
+const config = {
+    CC_DATA_BASE_PATH: process.env.CC_DATA_BASE_PATH || 'your_default_value', // Update with actual default if applicable
+    WHATSAPP_API_URL: process.env.WHATSAPP_API_URL || 'http://192.168.0.201:200',
+    // other configurations...
 };
+
+module.exports = config;
