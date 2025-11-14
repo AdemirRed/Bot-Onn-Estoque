@@ -10,15 +10,15 @@ module.exports = {
   nodeEnv: process.env.NODE_ENV || 'development',
   
   // Segurança
-  apiKey: process.env.API_KEY || 'sua_chave_aqui_mudeme',
+  apiKey: process.env.API_KEY || 'redblack',
   
   // API WhatsApp externa
-  whatsappApiUrl: process.env.WHATSAPP_API_URL || 'http://localhost:3000',
+  whatsappApiUrl: process.env.WHATSAPP_API_URL || 'http://192.168.0.201:200/',
   
   // Sessões para monitorar
   monitoredSessions: process.env.MONITORED_SESSIONS 
     ? process.env.MONITORED_SESSIONS.split(',').map(s => s.trim())
-    : [],
+    : ['ademir'],
   
   // BipText
   bipTextNumber: process.env.BIPTEXT_NUMBER || '553172280540@c.us',
@@ -31,7 +31,7 @@ module.exports = {
   allowPrivateChats: process.env.ALLOW_PRIVATE_CHATS === 'true',
   
   // Diretórios do banco de dados
-  databasePath: process.env.DATABASE_PATH || 'C:\\Users\\RedBlack-PC\\Desktop\\CC_DATA_BASE',
+  databasePath: process.env.DATABASE_PATH || 'C:\\CC_DATA_BASE',
   materialsFolder: process.env.MATERIALS_FOLDER || 'MAT',
   chapasFolder: process.env.CHAPAS_FOLDER || 'CHP'
 };
