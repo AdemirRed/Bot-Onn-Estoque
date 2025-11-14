@@ -7,3 +7,5 @@ swagger-output.json
 .DS_Store
 *.pdf
 relatorio-estoque-*.html
+test*
+debug-*

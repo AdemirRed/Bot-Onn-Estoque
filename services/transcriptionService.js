@@ -224,9 +224,33 @@ async function processAudioWithReply(messageId, sessionId, chatId) {
   }
 }
 
+/**
+ * Transcreve um áudio específico por ID (sem enviar respostas)
+ * @param {string} messageId - ID da mensagem de áudio
+ * @returns {Promise<string>} Texto transcrito
+ */
+async function transcribeAudioById(messageId) {
+  const audio = audioService.getAudio(messageId);
+  if (!audio) {
+    throw new Error('Áudio não encontrado na memória');
+  }
+
+  const transcription = await transcribeAudio(
+    audio.sessionId,
+    audio.base64,
+    `audio_${messageId.substring(0, 10)}.ogg`
+  );
+
+  // Marca como transcrito
+  audioService.markAsTranscribed(messageId, transcription);
+  
+  return transcription;
+}
+
 module.exports = {
   transcribeAudio,
   transcribeStoredAudio,
   transcribeAllPending,
-  processAudioWithReply
+  processAudioWithReply,
+  transcribeAudioById
 };

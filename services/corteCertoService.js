@@ -1,10 +1,11 @@
 const fs = require('fs').promises;
 const path = require('path');
+const config = require('../config');
 
-// Caminho base do banco de dados do Corte Certo
-const DB_PATH = path.join(__dirname, '..', 'CC_DATA_BASE', 'CC_DATA_BASE');
-const MAT_PATH = path.join(DB_PATH, 'MAT');
-const CHP_PATH = path.join(DB_PATH, 'CHP');
+// Caminho base do banco de dados do Corte Certo (configurável)
+const DB_PATH = config.databasePath;
+const MAT_PATH = path.join(DB_PATH, config.materialsFolder);
+const CHP_PATH = path.join(DB_PATH, config.chapasFolder);
 
 /**
  * Serviço para leitura e manipulação dos arquivos do Corte Certo
@@ -234,6 +235,23 @@ class CorteCertoService {
   clearCache() {
     this.materialsCache = null;
     this.cacheTime = null;
+  }
+
+  /**
+   * Retorna estatísticas do cache
+   * @returns {Object} Estatísticas do cache
+   */
+  getCacheStats() {
+    const now = Date.now();
+    const isValid = this.cacheTime && (now - this.cacheTime < this.CACHE_DURATION);
+    
+    return {
+      materialsCount: this.materialsCache ? Object.keys(this.materialsCache).length : 0,
+      chapasCount: this.chapasCache ? Object.keys(this.chapasCache).length : 0,
+      retalhosCount: this.retalhosCache ? Object.keys(this.retalhosCache).length : 0,
+      cacheTime: this.cacheTime,
+      isCacheValid: isValid
+    };
   }
 }
 

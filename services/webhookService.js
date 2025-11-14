@@ -7,6 +7,7 @@ const audioService = require('./audioService');
 const transcriptionService = require('./transcriptionService');
 const materialSearchService = require('./materialSearchService');
 const messageService = require('./messageService');
+const multiAudioManager = require('./multiAudioManager');
 
 // Inicializa com as sessões do .env
 let sessionFilters = [...config.monitoredSessions];
@@ -107,6 +108,18 @@ function logWebhookEvent(sessionId, eventType, data) {
         if (msgData.from === config.bipTextNumber) {
           console.log(`│ 🚫 Ignorado: É do BipText`);
           break;
+        }
+        
+        // Verifica se deve processar baseado no controle de grupos/contatos
+        if (!shouldProcessChat(msgData.from)) {
+          console.log(`│ 🚫 Ignorado: Chat não permitido nas configurações`);
+          break;
+        }
+        
+        // Se usuário enviar mensagem de texto, cancela áudios pendentes
+        if (multiAudioManager.hasPendingAudios(msgData.from)) {
+          multiAudioManager.cancelPending(msgData.from);
+          console.log(`│ 🚫 Cancelados áudios pendentes - usuário enviou texto`);
         }
         
         // Ignora se acabamos de enviar uma mensagem com esse conteúdo para esse contato
@@ -241,13 +254,17 @@ function logWebhookEvent(sessionId, eventType, data) {
           
           // Ignora áudios do BipText (bot de transcrição)
           if (msg.from === config.bipTextNumber) {
-            console.log(`│ 🚫 Ignorado: É do BipText`);
-            break;
-          }
-          
-          console.log(`│ 💾 Armazenando e processando...`);
-          
-          // Armazena o áudio
+          console.log(`│ 🚫 Ignorado: É do BipText`);
+          break;
+        }
+        
+        // Verifica se deve processar baseado no controle de grupos/contatos
+        if (!shouldProcessChat(msg.from)) {
+          console.log(`│ 🚫 Ignorado: Chat não permitido nas configurações`);
+          break;
+        }
+        
+        console.log(`│ 💾 Armazenando e processando...`);          // Armazena o áudio
           const messageId = msg.id._serialized || msg.id;
           audioService.storeAudio(messageId, {
             sessionId,
@@ -259,15 +276,12 @@ function logWebhookEvent(sessionId, eventType, data) {
             filesize: media.filesize
           });
           
-          // Processa automaticamente: responde e transcreve
-          // Executa em background para não bloquear o webhook
-          setTimeout(async () => {
-            await transcriptionService.processAudioWithReply(
-              messageId,
-              sessionId,
-              msg.from
-            );
-          }, 1000);
+          // Usa o multiAudioManager para processamento inteligente
+          const audioCount = multiAudioManager.addAudio(msg.from, messageId, sessionId);
+          console.log(`│ 🔢 Total de áudios na fila: ${audioCount}`);
+          
+          // O processamento será feito automaticamente pelo multiAudioManager
+          // após 5 segundos sem novos áudios
         }
       }
       break;
@@ -430,6 +444,27 @@ function setupWebhookListeners(sessionId, client) {
 }
 
 /**
+ * Verifica se deve processar mensagens de um chat específico
+ * @param {string} chatId - ID do chat (pode ser grupo ou contato privado)
+ * @returns {boolean}
+ */
+function shouldProcessChat(chatId) {
+  // Identifica se é grupo (contém "-" no ID) ou contato privado
+  const isGroup = chatId.includes('-');
+  
+  if (isGroup) {
+    // Para grupos: verifica lista de grupos permitidos
+    if (config.allowedGroups === null) {
+      return true; // Todos os grupos permitidos
+    }
+    return config.allowedGroups.includes(chatId);
+  } else {
+    // Para contatos privados: verifica configuração
+    return config.allowPrivateChats;
+  }
+}
+
+/**
  * Processa webhook recebido da API externa
  * @param {string} sessionId - ID da sessão
  * @param {string} eventType - Tipo do evento
@@ -444,5 +479,6 @@ module.exports = {
   getSessionFilters,
   setupWebhookListeners,
   processWebhook,
-  logWebhookEvent
+  logWebhookEvent,
+  shouldProcessChat
 };

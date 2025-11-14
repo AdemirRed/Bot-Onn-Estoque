@@ -3,6 +3,7 @@ const messageAnalyzerService = require('./messageAnalyzerService');
 const userStateService = require('./userStateService');
 const reportService = require('./reportService');
 const materialListService = require('./materialListService');
+const audioMaterialExtractor = require('./audioMaterialExtractor');
 
 /**
  * Serviço de busca inteligente de materiais
@@ -114,7 +115,7 @@ class MaterialSearchService {
     }
 
     // Busca normal de material ou relatório
-    return await this.searchMaterial(from, sessionId, analysis);
+    return await this.searchMaterial(from, sessionId, analysis, message);
   }
 
   /**
@@ -122,9 +123,10 @@ class MaterialSearchService {
    * @param {string} from - ID do usuário
    * @param {string} sessionId - Sessão
    * @param {Object} analysis - Análise da mensagem
+   * @param {string} originalMessage - Mensagem original para detectar áudio
    * @returns {Promise<Object>}
    */
-  async searchMaterial(from, sessionId, analysis) {
+  async searchMaterial(from, sessionId, analysis, originalMessage) {
     const { cor, espessura, tipo, isReportRequest, isListRequest } = analysis;
 
     // Se é solicitação de relatório
@@ -137,84 +139,121 @@ class MaterialSearchService {
       return await this.startListFlow(from, sessionId, analysis);
     }
 
-    // Valida se tem informação mínima
-    if (!cor) {
-      return {
-        type: 'error',
-        message: messageAnalyzerService.getSuggestionMessage()
-      };
-    }
+    // SEMPRE usa busca inteligente com audioMaterialExtractor para todas as mensagens
+    // (não apenas transcrições de áudio, pois transcrições chegam como texto normal)
+    return await this.searchFromAudioTranscription(from, sessionId, originalMessage);
+  }
 
-    // Busca materiais
-    const materials = await corteCertoService.searchMaterials(cor, espessura);
+  /**
+   * Detecta se uma mensagem é transcrição de áudio
+   * @param {string} message - Mensagem
+   * @returns {boolean}
+   */
+  isAudioTranscription(message) {
+    // Verifica por indicadores de transcrição
+    const audioIndicators = [
+      /\*\*.*?\*\*/,                    // **texto em bold**
+      /--.*?por\s+biptext/i,           // Linha de crédito BipText
+      /viratexto.*?por/i,              // Viratexto por...
+      /transcri[çc][ãa]o/i,            // palavra transcricao
+      /áudio.*?convertido/i,           // audio convertido
+      
+      // Padrões comuns de fala natural (indicam áudio)
+      /^[ôó]\s+\w+,/i,                 // "Ô Ademir,", "Ó fulano,"
+      /\b(tem|pode\s+ser|preciso|quero)\b.*?\?$/i,  // Perguntas naturais
+      /\b(corta|cortar|pegar|buscar)\b.*?\d+/i,     // Comandos com números
+      /\bnão\s+precisa\s+ser\b/i,      // "não precisa ser"
+      /\b\d+\s+metros?\s+por\s+\d+/i   // "1 metro por 50"
+    ];
 
-    // Nenhum resultado - tenta busca mais ampla
-    if (materials.length === 0) {
-      // Tenta buscar apenas pela primeira palavra da cor
-      const firstWord = cor.split(/\s+/)[0];
-      if (firstWord && firstWord.length > 2 && firstWord !== cor) {
-        const similarMaterials = await corteCertoService.searchMaterials(firstWord, espessura);
+    return audioIndicators.some(pattern => pattern.test(message));
+  }
+
+  /**
+   * Busca material usando extrator inteligente
+   * @param {string} from - ID do usuário
+   * @param {string} sessionId - Sessão
+   * @param {string} message - Mensagem do usuário
+   * @returns {Promise<Object>}
+   */
+  async searchFromAudioTranscription(from, sessionId, message) {
+    try {
+      // Extrai informações de material da mensagem
+      const extracted = audioMaterialExtractor.extractMaterialInfo(message);
+      
+      if (!extracted.materialTerms || extracted.materialTerms.length === 0) {
+        return {
+          type: 'no_material',
+          message: `❌ *Material não encontrado*\n\n` +
+                   `Não consegui identificar o nome de um material na sua mensagem.\n\n` +
+                   `💡 *Dicas:*\n` +
+                   `• Envie o nome do material e espessura\n` +
+                   `• Exemplo: "Branco liso 18mm"\n` +
+                   `• Ou apenas a cor: "Branco"`
+        };
+      }
+
+      // Busca usando os termos extraídos
+      const searchResult = await audioMaterialExtractor.searchWithTerms(
+        extracted.materialTerms,
+        extracted.espessura,
+        corteCertoService
+      );
+
+      if (searchResult.success) {
+        const materials = searchResult.materials;
         
-        if (similarMaterials.length > 0) {
-          // Limita a 10 materiais
-          const limitedMaterials = similarMaterials.slice(0, 10);
-          
-          // Salva no contexto para permitir seleção
-          this.setContext(from, {
-            awaitingSelection: true,
-            materials: limitedMaterials,
-            espessura
+        // Mostra resultado da busca inteligente
+        if (materials.length === 1) {
+          return await this.showMaterialDetails(from, sessionId, materials[0], 'ambos', {
+            isSmartSearch: true,
+            searchTerm: searchResult.searchTerm,
+            extractedTerms: extracted.materialTerms,
+            extractedThickness: extracted.espessura
           });
-          
+        } else {
+          // Múltiplos resultados - permite seleção
+          this.setContext(from, {
+            type: 'selection',
+            awaitingSelection: true,
+            materials: materials,
+            searchTerm: searchResult.searchTerm,
+            isSmartSearch: true,
+            extractedTerms: extracted.materialTerms,
+            extractedThickness: extracted.espessura
+          });
+
           return {
-            type: 'suggestions',
-            message: this.formatSuggestionsMessage(cor, limitedMaterials, espessura)
+            type: 'selection',
+            message: this.formatMultipleResults(materials, {
+              searchTerm: searchResult.searchTerm,
+              isSmartSearch: true
+            })
           };
         }
+      } else {
+        // Não encontrou com nenhum termo
+        return {
+          type: 'not_found',
+          message: `❌ *Material não encontrado*\n\n` +
+                   `Não encontrei material com os termos identificados:\n` +
+                   `${extracted.materialTerms.slice(0, 3).map(term => `• *${term}*`).join('\n')}\n\n` +
+                   `${extracted.espessura ? `🔍 Espessura detectada: *${extracted.espessura}mm*\n\n` : ''}` +
+                   `💡 *Sugestões:*\n` +
+                   `• Tente digitar apenas a cor do material\n` +
+                   `• Verifique se o material existe no estoque\n` +
+                   `• Use "lista" para ver materiais disponíveis`
+        };
       }
-      
+    } catch (error) {
+      console.error('Erro na busca inteligente:', error);
       return {
-        type: 'not_found',
-        message: this.formatNotFoundMessage(cor, espessura)
+        type: 'error',
+        message: `❌ *Erro no processamento*\n\n` +
+                 `Ocorreu um erro ao processar sua mensagem.\n\n` +
+                 `💡 Tente enviar novamente ou reformule a consulta.`
       };
     }
-
-    // Resultado único - mostra diretamente
-    if (materials.length === 1) {
-      return await this.showMaterialDetails(from, sessionId, materials[0], tipo);
-    }
-
-    // Se tem espessura especificada mas múltiplos resultados
-    if (espessura && materials.length > 1) {
-      // Filtra exatamente pela espessura
-      const exactMatches = materials.filter(m => m.espessura === espessura);
-      
-      if (exactMatches.length === 1) {
-        return await this.showMaterialDetails(from, sessionId, exactMatches[0], tipo);
-      }
-      
-      if (exactMatches.length > 1) {
-        return this.showMaterialOptions(from, exactMatches, espessura);
-      }
-    }
-
-    // Múltiplos resultados - agrupa por espessura
-    const byThickness = this.groupByThickness(materials);
-
-    // Se só tem uma espessura disponível
-    if (Object.keys(byThickness).length === 1) {
-      const thickness = Object.keys(byThickness)[0];
-      const mats = byThickness[thickness];
-      
-      if (mats.length === 1) {
-        return await this.showMaterialDetails(from, sessionId, mats[0], tipo);
-      }
-      
-      return this.showMaterialOptions(from, mats, parseInt(thickness));
-    }
-
-    // Múltiplas espessuras - pede para especificar
-    return this.askForThickness(from, byThickness, cor);
   }
 
   /**
@@ -223,15 +262,20 @@ class MaterialSearchService {
    * @param {string} sessionId - Sessão
    * @param {Object} material - Material selecionado
    * @param {string} tipo - Tipo (chapa/retalho/ambos)
+   * @param {Object} audioInfo - Informações do áudio (opcional)
    * @returns {Promise<Object>}
    */
-  async showMaterialDetails(from, sessionId, material, tipo) {
+  async showMaterialDetails(from, sessionId, material, tipo, audioInfo = null) {
     const chapas = tipo !== 'retalho' ? await corteCertoService.loadChapas(material.codigo) : [];
     const retalhos = tipo !== 'chapa' ? await corteCertoService.loadRetalhos(material.codigo) : [];
 
-    // Salva no contexto o último material visualizado (para permitir "mostre retalhos" depois)
+    // Limpa contexto de seleção e salva apenas o último material visualizado
     this.setContext(from, {
-      lastViewedMaterial: material
+      lastViewedMaterial: material,
+      awaitingSelection: false,
+      awaitingThickness: false,
+      materials: null,
+      byThickness: null
     });
 
     return {
@@ -239,7 +283,7 @@ class MaterialSearchService {
       material,
       chapas,
       retalhos,
-      message: this.formatMaterialDetails(material, chapas, retalhos, tipo)
+      message: this.formatMaterialDetails(material, chapas, retalhos, tipo, audioInfo)
     };
   }
 
@@ -429,10 +473,20 @@ class MaterialSearchService {
   }
 
   /**
-   * Formata detalhes do material
+   * Formata detalhes de um material
    */
-  formatMaterialDetails(material, chapas, retalhos, tipo) {
-    let msg = `${material.codigo} → *${material.nome}*\n`;
+  formatMaterialDetails(material, chapas, retalhos, tipo, audioInfo = null) {
+    let msg = '';
+    
+    // Cabeçalho específico para busca de áudio
+    if (audioInfo && audioInfo.isAudioSearch) {
+      msg += `🎤 *Áudio processado*\n\n`;
+      if (audioInfo.searchTerm) {
+        msg += `🔍 Encontrado por: *${audioInfo.searchTerm}*\n\n`;
+      }
+    }
+    
+    msg += `${material.codigo} → *${material.nome}*\n`;
     msg += `📏 Espessura: *${material.espessura}mm*\n`;
 
     // Veio: se giro=1 então não faz sentido de veio (rotacionável)
@@ -509,6 +563,38 @@ class MaterialSearchService {
         msg += ` (${mat.espessura}mm)`;
       }
       msg += `\n`;
+    });
+    
+    msg += `━━━━━━━━━━━━━━━━━━\n\n`;
+    msg += `💬 *Responda com o número* da opção desejada.`;
+    
+    return msg;
+  }
+
+  /**
+   * Formata múltiplos resultados (incluindo busca de áudio)
+   * @param {Array} materials - Materiais encontrados
+   * @param {Object} options - Opções extras (searchTerm, isAudioSearch)
+   * @returns {string}
+   */
+  formatMultipleResults(materials, options = {}) {
+    const { searchTerm, isAudioSearch } = options;
+    
+    let msg = isAudioSearch ? `🎤 *Áudio processado*\n\n` : '';
+    
+    if (isAudioSearch && searchTerm) {
+      msg += `🔍 Busca por: *${searchTerm}*\n\n`;
+    }
+    
+    msg += `🎨 *Encontrei ${materials.length} materiais*\n`;
+    msg += `\n━━━━━━━━━━━━━━━━━━\n`;
+    
+    // Emojis de números
+    const numberEmojis = ['1️⃣', '2️⃣', '3️⃣', '4️⃣', '5️⃣', '6️⃣', '7️⃣', '8️⃣', '9️⃣', '🔟'];
+    
+    materials.forEach((mat, i) => {
+      const emoji = numberEmojis[i] || `${i + 1}.`;
+      msg += `${emoji} ${mat.codigo} → *${mat.nome}* (${mat.espessura}mm)\n`;
     });
     
     msg += `━━━━━━━━━━━━━━━━━━\n\n`;
