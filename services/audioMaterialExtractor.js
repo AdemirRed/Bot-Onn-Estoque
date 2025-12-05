@@ -4,6 +4,7 @@
 class AudioMaterialExtractor {
   constructor() {
     // Palavras irrelevantes que devem ser removidas
+    // NOTA: "retalho/retalhos" NÃO está aqui pois é um material específico (códigos 99 e 999)
     this.stopWords = [
       // Nomes comuns
       'demir', 'ademir', 'redblack', 'red', 'black',
@@ -12,9 +13,9 @@ class AudioMaterialExtractor {
       'fazer', 'faz', 'pegar', 'buscar', 'procurar', 'estava', 'talvez',
       // Medidas e dimensões (contexto, não material)
       'metro', 'metros', 'centimetro', 'centimetros', 'largura', 'comprimento',
-      'peça', 'peca', 'pedaço', 'pedaco', 'chapa', 'retalho',
+      'peça', 'peca', 'pedaço', 'pedaco', 'chapa',
       // Tipos de material (sempre presentes, não distinguem)
-      'mdf', 'mdp', 'compensado', 'aglomerado', 'madeira', 'chapa',
+      'mdf', 'mdp', 'compensado', 'aglomerado', 'madeira',
       // Palavras conectivas
       'uma', 'de', 'por', 'em', 'pra', 'para', 'com', 'sem', 'não', 'nao',
       'é', 'e', 'ou', 'mas', 'se', 'que', 'quando', 'onde',

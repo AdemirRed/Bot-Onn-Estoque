@@ -47,7 +47,7 @@ class MessageAnalyzerService {
     
     // Lista de palavras irrelevantes para remover
     const stopWords = [
-      'chapa', 'chapas', 'retalho', 'retalhos', 'sobra', 'sobras',
+      'chapa', 'chapas', 'sobra', 'sobras',
       'tem', 'preciso', 'quero', 'gostaria', 'inteira', 'inteiras',
       'para', 'de', 'em', 'com', 'o', 'a', 'os', 'as',
       'do', 'da', 'dos', 'das', 'no', 'na', 'nos', 'nas',
@@ -55,6 +55,7 @@ class MessageAnalyzerService {
       // Palavras de comando
       'relatorio', 'relatório', 'relacao', 'relação', 'listagem', 
       'inventario', 'inventário', 'lista', 'listar', 'imprimir'
+      // NOTA: "retalho/retalhos" NÃO está aqui pois pode ser um material específico
     ];
     
     // Remove a espessura e palavras-chave de contexto
