@@ -170,6 +170,72 @@ class MaterialSearchService {
   }
 
   /**
+   * Busca especial para materiais RETALHOS (códigos 99 e 999)
+   * Detecta padrões como "retalho 18", "retalho 6", "retalhos 18", etc.
+   * @param {string} from - ID do usuário
+   * @param {string} sessionId - Sessão
+   * @param {string} message - Mensagem do usuário
+   * @returns {Promise<Object|null>} Resultado da busca ou null se não for busca de retalho
+   */
+  async searchRetalhoSpecial(from, sessionId, message) {
+    // Normaliza mensagem
+    const normalized = message.toLowerCase().trim();
+    
+    // Verifica se contém "retalho" ou "retalhos"
+    if (!normalized.includes('retalho')) {
+      return null;
+    }
+    
+    // Extrai espessura da mensagem
+    const espessuraMatch = normalized.match(/\b(6|18)\b/);
+    if (!espessuraMatch) {
+      return null; // Não tem espessura específica, deixa busca normal tratar
+    }
+    
+    const espessura = parseInt(espessuraMatch[1]);
+    
+    // Verifica se não tem outras palavras que indicam material específico
+    // Remove "retalho/retalhos", números e palavras comuns
+    const withoutRetalho = normalized
+      .replace(/retalhos?/g, '')
+      .replace(/\b(6|18|mm)\b/g, '')
+      .replace(/\b(tem|de|com|chapa|chapas)\b/g, '')
+      .trim();
+    
+    // Se sobrou outras palavras relevantes (mais de 2 caracteres), deixa busca normal tratar
+    // (ex: "branco retalho 18" deve buscar material branco, não o RETALHOS genérico)
+    const MIN_TERM_LENGTH = 2; // Minimum length for a meaningful material term
+    if (withoutRetalho.length > MIN_TERM_LENGTH) {
+      return null;
+    }
+    
+    // Busca o material RETALHOS específico
+    let codigo = null;
+    if (espessura === 18) {
+      codigo = '99';  // MDF RETALHOS 18mm
+    } else if (espessura === 6) {
+      codigo = '999'; // RETALHOS 6mm
+    }
+    
+    if (!codigo) {
+      return null;
+    }
+    
+    // Carrega o material
+    const material = await corteCertoService.loadMaterial(codigo);
+    if (!material) {
+      return null;
+    }
+    
+    // Mostra detalhes do material RETALHOS
+    return await this.showMaterialDetails(from, sessionId, material, 'ambos', {
+      isSmartSearch: true,
+      searchTerm: `retalho ${espessura}mm`,
+      isRetalhoSpecial: true
+    });
+  }
+
+  /**
    * Busca material usando extrator inteligente
    * @param {string} from - ID do usuário
    * @param {string} sessionId - Sessão
@@ -178,6 +244,12 @@ class MaterialSearchService {
    */
   async searchFromAudioTranscription(from, sessionId, message) {
     try {
+      // Detecta busca específica por retalhos (códigos 99 e 999)
+      const retalhoResult = await this.searchRetalhoSpecial(from, sessionId, message);
+      if (retalhoResult) {
+        return retalhoResult;
+      }
+      
       // Extrai informações de material da mensagem
       const extracted = audioMaterialExtractor.extractMaterialInfo(message);
       
@@ -193,9 +265,31 @@ class MaterialSearchService {
         };
       }
 
-      // Busca usando os termos extraídos
+      // Filtra termos: Se há múltiplos termos e um deles é apenas "Retalho/Retalhos",
+      // remove esse termo para priorizar outros materiais
+      let filteredTerms = extracted.materialTerms;
+      if (filteredTerms.length > 1) {
+        const hasRetalhoAlone = filteredTerms.some(t => 
+          t.toLowerCase().trim() === 'retalho' || 
+          t.toLowerCase().trim() === 'retalhos'
+        );
+        const hasOtherTerms = filteredTerms.some(t => {
+          const lower = t.toLowerCase().trim();
+          return lower !== 'retalho' && lower !== 'retalhos';
+        });
+        
+        // Se tem "retalho" E outros termos, remove "retalho" para priorizar os outros
+        if (hasRetalhoAlone && hasOtherTerms) {
+          filteredTerms = filteredTerms.filter(t => {
+            const lower = t.toLowerCase().trim();
+            return lower !== 'retalho' && lower !== 'retalhos';
+          });
+        }
+      }
+
+      // Busca usando os termos extraídos (filtrados)
       const searchResult = await audioMaterialExtractor.searchWithTerms(
-        extracted.materialTerms,
+        filteredTerms,
         extracted.espessura,
         corteCertoService
       );
