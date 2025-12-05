@@ -202,9 +202,10 @@ class MaterialSearchService {
       .replace(/\b(tem|de|com|chapa|chapas)\b/g, '')
       .trim();
     
-    // Se sobrou outras palavras relevantes, deixa busca normal tratar
+    // Se sobrou outras palavras relevantes (mais de 2 caracteres), deixa busca normal tratar
     // (ex: "branco retalho 18" deve buscar material branco, não o RETALHOS genérico)
-    if (withoutRetalho.length > 2) {
+    const MIN_TERM_LENGTH = 2; // Minimum length for a meaningful material term
+    if (withoutRetalho.length > MIN_TERM_LENGTH) {
       return null;
     }
     
@@ -232,29 +233,6 @@ class MaterialSearchService {
       searchTerm: `retalho ${espessura}mm`,
       isRetalhoSpecial: true
     });
-  }
-  
-  /**
-   * Busca com tratamento de variações (plural/singular, aliases)
-   * @param {string} searchTerm - Termo de busca
-   * @param {number} espessura - Espessura
-   * @returns {Promise<Array>} Materiais encontrados
-   */
-  async searchWithVariations(searchTerm, espessura) {
-    // Busca normal primeiro
-    let materials = await corteCertoService.searchMaterials(searchTerm, espessura);
-    
-    // Se não encontrou e é "retalho/retalhos", tenta a variação oposta
-    if (materials.length === 0) {
-      const normalizedTerm = searchTerm.toLowerCase().trim();
-      
-      if (normalizedTerm === 'retalho' || normalizedTerm === 'retalhos') {
-        // Tenta buscar "RETALHOS" (plural, como está nos materiais)
-        materials = await corteCertoService.searchMaterials('retalhos', espessura);
-      }
-    }
-    
-    return materials;
   }
 
   /**
