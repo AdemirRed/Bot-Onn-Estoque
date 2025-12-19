@@ -503,12 +503,15 @@ class MaterialSearchService {
 
     // Chapas
     if (tipo !== 'retalho' && chapas.length > 0) {
+      // Pega a menor quantidade entre todas as chapas (não soma!)
+      const minQuantity = Math.min(...chapas.map(c => c.quantityCandidate || 0));
+      
       // Se existir a chapa base 2740x1840, mostre a quantityCandidate dessa linha
       const baseSheet = chapas.find(c => Math.round(c.altura) === 2740 && Math.round(c.largura) === 1840);
-      if (baseSheet && baseSheet.quantityCandidate) {
+      if (baseSheet && baseSheet.quantityCandidate !== undefined) {
         msg += `📦 *CHAPAS* (2740x1840): *${baseSheet.quantityCandidate} unidades*\n\n`;
       } else {
-        msg += `📦 *CHAPAS INTEIRAS* (${chapas.length})\n\n`;
+        msg += `📦 *CHAPAS INTEIRAS* (${minQuantity})\n\n`;
       }
     }
 
