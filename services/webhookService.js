@@ -460,7 +460,8 @@ function shouldProcessChat(chatId) {
     return config.allowedGroups.includes(chatId);
   } else {
     // Para contatos privados: verifica configuração
-    return config.allowPrivateChats;
+    return true; // FORÇADO: sempre permite chats privados
+    // return config.allowPrivateChats;
   }
 }
 

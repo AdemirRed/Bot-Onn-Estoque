@@ -11,11 +11,14 @@ const config = require('../config');
  */
 async function listActiveSessions() {
   try {
+    console.log('🔍 Fazendo requisição para:', `${config.whatsappApiUrl}/session/list`);
     const response = await axios.get(`${config.whatsappApiUrl}/session/list`, {
       headers: {
         'x-api-key': config.apiKey
       }
     });
+    
+    console.log('📊 Resposta da API:', JSON.stringify(response.data, null, 2));
     
     if (response.data && response.data.sessions) {
       return response.data.sessions;
@@ -23,7 +26,13 @@ async function listActiveSessions() {
     
     return [];
   } catch (error) {
-    console.error('❌ Erro ao listar sessões:', error.message);
+    console.error('❌ Erro ao listar sessões:');
+    console.error('   URL:', `${config.whatsappApiUrl}/session/list`);
+    console.error('   Status:', error.response?.status);
+    console.error('   StatusText:', error.response?.statusText);
+    console.error('   Data:', error.response?.data);
+    console.error('   Message:', error.message);
+    console.error('   Stack:', error.stack);
     return [];
   }
 }
@@ -58,7 +67,11 @@ async function displayActiveSessions() {
   
   if (sessions.length === 0) {
     console.log('⚠️  Nenhuma sessão ativa encontrada na API WhatsApp');
+<<<<<<< HEAD
     console.log('💡 Inicie sessões usando: GET http://192.168.0.201:200/session/start/:sessionId\n');
+=======
+    console.log(`💡 Inicie sessões usando: GET ${config.whatsappApiUrl}session/start/:sessionId\n`);
+>>>>>>> d7da1bc573aae49f2fd4ffb51a2642c0c2ae5c58
     return [];
   }
   
