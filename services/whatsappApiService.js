@@ -67,11 +67,7 @@ async function displayActiveSessions() {
   
   if (sessions.length === 0) {
     console.log('⚠️  Nenhuma sessão ativa encontrada na API WhatsApp');
-<<<<<<< HEAD
-    console.log('💡 Inicie sessões usando: GET http://192.168.0.201:200/session/start/:sessionId\n');
-=======
     console.log(`💡 Inicie sessões usando: GET ${config.whatsappApiUrl}session/start/:sessionId\n`);
->>>>>>> d7da1bc573aae49f2fd4ffb51a2642c0c2ae5c58
     return [];
   }
   
