@@ -154,6 +154,34 @@ async function startAnimatedLoading(sessionId, chatId, operation, estimatedSecon
           console.error('Erro ao finalizar loading em 100%:', error.message);
         }
       }
+    },
+    finishWithResult: async (resultMessage) => {
+      // Stop the interval first
+      stopped = true;
+      if (intervalId) {
+        clearInterval(intervalId);
+      }
+      
+      // Update to 100% first, then add result below
+      if (messageId) {
+        try {
+          // First show 100%
+          const finalLoadingMessage = `${LOADING_FRAMES[LOADING_FRAMES.length - 1]}\n⏳ ${operation}... 100%`;
+          console.log('🎯 Finalizando loading em 100%...');
+          await editMessage(sessionId, chatId, messageId, finalLoadingMessage);
+          
+          // Small delay to show 100%
+          await new Promise(resolve => setTimeout(resolve, 400));
+          
+          // Then add result below the 100% bar
+          const finalMessage = `${LOADING_FRAMES[LOADING_FRAMES.length - 1]}\n⏳ ${operation}... 100%\n\n${resultMessage}`;
+          console.log('📝 Adicionando resultado abaixo do loading...');
+          await editMessage(sessionId, chatId, messageId, finalMessage);
+          console.log('✅ Resultado final exibido com barra de progresso!');
+        } catch (error) {
+          console.error('Erro ao finalizar com resultado:', error.message);
+        }
+      }
     }
   };
 

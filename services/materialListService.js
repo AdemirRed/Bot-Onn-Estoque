@@ -74,21 +74,22 @@ class MaterialListService {
 
     console.log(`✅ Lista gerada: ${materials.length} materiais`);
 
-    // Finish loading at 100% and send completion message
+    const summaryInfo = {
+      total: materials.length,
+      espessura: espessura || 'Todas'
+    };
+
+    // Finish loading and replace with result
     if (loadingController) {
-      await loadingController.finishLoading();
-    }
-    if (sessionId && chatId) {
-      await sendCompletionMessage(sessionId, chatId, 'Lista de materiais', true);
+      const espessuraText = espessura ? `Espessura: ${espessura}mm\n` : '';
+      const resultMessage = `📋 *Lista de Materiais*\n\n${espessuraText}Total: ${summaryInfo.total} materiais\n\n✅ Lista gerada com sucesso!`;
+      await loadingController.finishWithResult(resultMessage);
     }
 
     return {
       filepath,
       filename,
-      summary: {
-        total: materials.length,
-        espessura: espessura || 'Todas'
-      }
+      summary: summaryInfo
     };
   }
 

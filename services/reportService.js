@@ -67,18 +67,18 @@ class ReportService {
 
     await fs.writeFile(filepath, html, 'utf-8');
 
-    // Finish loading at 100% and send completion message
+    const summary = this.generateSummary(data);
+    
+    // Finish loading and replace with result
     if (loadingController) {
-      await loadingController.finishLoading();
-    }
-    if (sessionId && chatId) {
-      await sendCompletionMessage(sessionId, chatId, 'Relatório', true);
+      const resultMessage = `📊 *Relatório de Estoque*\n\n${summary}\n\n✅ Relatório gerado com sucesso!`;
+      await loadingController.finishWithResult(resultMessage);
     }
 
     return {
       filepath,
       filename,
-      summary: this.generateSummary(data)
+      summary: summary
     };
   }
 

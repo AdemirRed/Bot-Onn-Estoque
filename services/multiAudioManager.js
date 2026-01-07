@@ -109,10 +109,6 @@ class MultiAudioManager {
 
       // Se teve transcrições bem-sucedidas
       if (transcriptions.length > 0) {
-        // Finish loading at 100% before sending result
-        await loadingController.finishLoading();
-        await sendCompletionMessage(sessionId, userId, 'Transcrição', true);
-        
         // Formata todas as transcrições
         let fullMessage = `📝 *Transcrição de ${transcriptions.length} áudio(s):*\n\n`;
         
@@ -123,9 +119,9 @@ class MultiAudioManager {
         // Remove a última quebra de linha dupla
         fullMessage = fullMessage.trim();
 
-        // Envia transcrições consolidadas
-        await messageService.sendTextMessage(sessionId, userId, fullMessage);
-        console.log(`✅ Transcrições consolidadas enviadas!`);
+        // Finish loading and replace with result in the same message
+        await loadingController.finishWithResult(fullMessage);
+        console.log(`✅ Transcrições consolidadas exibidas na mesma mensagem!`);
 
         // Combina todas as transcrições para busca de material
         const combinedText = transcriptions.map(t => t.transcription).join(' ');
