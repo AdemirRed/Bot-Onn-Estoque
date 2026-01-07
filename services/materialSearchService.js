@@ -686,11 +686,13 @@ class MaterialSearchService {
         chatId: from
       });
 
+      // Don't return message - it's already shown in the loading message
+      // Just return filepath for document sending
       return {
         type: 'report',
         filepath: report.filepath,
         filename: report.filename,
-        message: `📊 *Relatório de Estoque*\n\n${report.summary}`
+        message: null // No message needed - already in loading
       };
     } catch (error) {
       console.error('Erro ao gerar relatório:', error);
@@ -715,15 +717,13 @@ class MaterialSearchService {
         chatId: from
       });
 
-      const summaryText = espessura 
-        ? `Espessura: ${espessura}mm\nTotal: ${list.summary.total} materiais`
-        : `Total: ${list.summary.total} materiais`;
-
+      // Don't return message - it's already shown in the loading message
+      // Just return filepath for document sending
       return {
         type: 'material_list',
         filepath: list.filepath,
         filename: list.filename,
-        message: `📋 *Lista de Materiais*\n\n${summaryText}\n\n📄 _Arquivo PDF gerado para impressão_`
+        message: null // No message needed - already in loading
       };
     } catch (error) {
       console.error('Erro ao gerar lista:', error);

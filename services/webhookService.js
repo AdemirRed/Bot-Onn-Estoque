@@ -187,20 +187,24 @@ function logWebhookEvent(sessionId, eventType, data) {
               }
             } else {
               // Resultado normal — envia a resposta
-              if (firstResult && firstResult.message) {
+              if (firstResult && (firstResult.message || firstResult.filepath)) {
                 // Verifica se é relatório ou lista de materiais
                 if ((firstResult.type === 'report' || firstResult.type === 'material_list') && firstResult.filepath) {
                   // Envia arquivo (HTML para relatório, PDF para lista)
+                  // Se message é null, não envia caption (resultado já está na mensagem de loading)
                   try {
-                    await messageService.sendDocument(sessionId, msgData.from, firstResult.filepath, firstResult.message);
+                    const caption = firstResult.message || ''; // Empty caption if null
+                    await messageService.sendDocument(sessionId, msgData.from, firstResult.filepath, caption);
                     const docType = firstResult.type === 'report' ? 'Relatório' : 'Lista';
                     console.log(`│ 📄 ${docType} enviado para ${msgData.from}`);
                   } catch (error) {
                     console.error(`│ ❌ Erro ao enviar documento:`, error.message);
-                    // Se falhar, envia mensagem de texto
-                    await messageService.sendTextMessage(sessionId, msgData.from, firstResult.message);
+                    // Se falhar e tiver mensagem, envia como texto
+                    if (firstResult.message) {
+                      await messageService.sendTextMessage(sessionId, msgData.from, firstResult.message);
+                    }
                   }
-                } else {
+                } else if (firstResult.message) {
                   // Registra no cache antes de enviar
                   const messageKey = `${sessionId}:${msgData.from}:${firstResult.message}`;
                   sentMessagesCache.set(messageKey, Date.now());
