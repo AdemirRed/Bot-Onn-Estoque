@@ -3,6 +3,7 @@ const config = require('../config');
 const audioService = require('./audioService');
 const messageService = require('./messageService');
 const materialSearchService = require('./materialSearchService');
+const { startAnimatedLoading, sendCompletionMessage } = require('../utils/loadingIndicator');
 
 /**
  * Serviço de transcrição de áudio usando BipText
@@ -13,13 +14,21 @@ const materialSearchService = require('./materialSearchService');
  * @param {string} sessionId - ID da sessão
  * @param {string} audioBase64 - Áudio em base64
  * @param {string} filename - Nome do arquivo (opcional)
+ * @param {string} chatId - Chat ID para enviar mensagens de loading (opcional)
  * @returns {Promise<string>} Texto transcrito
  */
-async function transcribeAudio(sessionId, audioBase64, filename = 'audio.ogg') {
+async function transcribeAudio(sessionId, audioBase64, filename = 'audio.ogg', chatId = null) {
+  let loadingController = null;
+  
   try {
     console.log(`\n🎤 Iniciando transcrição de áudio...`);
     console.log(`   Sessão: ${sessionId}`);
     console.log(`   Tamanho: ${audioBase64.length} chars`);
+    
+    // Start animated loading if chatId is provided
+    if (chatId) {
+      loadingController = await startAnimatedLoading(sessionId, chatId, 'Transcrevendo áudio', 15, 2500);
+    }
     
     // Garante que o base64 tem o prefixo correto
     const formattedAudio = audioBase64.startsWith('data:audio/') 
@@ -44,6 +53,15 @@ async function transcribeAudio(sessionId, audioBase64, filename = 'audio.ogg') {
     if (response.data && response.data.transcription) {
       console.log(`✅ Transcrição concluída!`);
       console.log(`   Texto: "${response.data.transcription}"\n`);
+      
+      // Finish loading at 100% and send completion message
+      if (loadingController) {
+        await loadingController.finishLoading();
+      }
+      if (chatId) {
+        await sendCompletionMessage(sessionId, chatId, 'Transcrição', true);
+      }
+      
       return response.data.transcription;
     }
     
@@ -51,6 +69,14 @@ async function transcribeAudio(sessionId, audioBase64, filename = 'audio.ogg') {
     
   } catch (error) {
     console.error(`❌ Erro na transcrição:`, error.message);
+    
+    // Finish loading and send error message
+    if (loadingController) {
+      await loadingController.finishLoading();
+    }
+    if (chatId) {
+      await sendCompletionMessage(sessionId, chatId, 'Transcrição', false);
+    }
     throw error;
   }
 }

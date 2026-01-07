@@ -2,6 +2,7 @@ const fs = require('fs').promises;
 const path = require('path');
 const PDFDocument = require('pdfkit');
 const corteCertoService = require('./corteCertoService');
+const { startAnimatedLoading, sendCompletionMessage } = require('../utils/loadingIndicator');
 
 /**
  * Serviço para gerar lista de materiais em PDF
@@ -30,7 +31,13 @@ class MaterialListService {
    * @returns {Promise<Object>} Caminho do arquivo e resumo
    */
   async generateMaterialList(options = {}) {
-    const { espessura = null, includeCode = true } = options;
+    const { espessura = null, includeCode = true, sessionId = null, chatId = null } = options;
+
+    // Start animated loading if session and chat IDs are provided
+    let loadingController = null;
+    if (sessionId && chatId) {
+      loadingController = await startAnimatedLoading(sessionId, chatId, 'Gerando lista de materiais', 10, 2000);
+    }
 
     console.log('📋 Gerando lista de materiais...');
 
@@ -66,6 +73,14 @@ class MaterialListService {
     await this.createPDF(materials, filepath, options);
 
     console.log(`✅ Lista gerada: ${materials.length} materiais`);
+
+    // Finish loading at 100% and send completion message
+    if (loadingController) {
+      await loadingController.finishLoading();
+    }
+    if (sessionId && chatId) {
+      await sendCompletionMessage(sessionId, chatId, 'Lista de materiais', true);
+    }
 
     return {
       filepath,

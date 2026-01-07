@@ -1,6 +1,7 @@
 const fs = require('fs').promises;
 const path = require('path');
 const corteCertoService = require('./corteCertoService');
+const { startAnimatedLoading, sendCompletionMessage } = require('../utils/loadingIndicator');
 
 /**
  * Serviço para geração de relatórios de estoque
@@ -32,8 +33,16 @@ class ReportService {
       material = null,      // Código do material ou null para todos
       cor = null,           // Nome/cor do material para busca
       espessura = null,     // Espessura específica ou null para todas
-      tipo = 'ambos'        // 'chapa', 'retalho' ou 'ambos'
+      tipo = 'ambos',       // 'chapa', 'retalho' ou 'ambos'
+      sessionId = null,     // Session ID for loading messages
+      chatId = null         // Chat ID for loading messages
     } = options;
+
+    // Start animated loading if session and chat IDs are provided
+    let loadingController = null;
+    if (sessionId && chatId) {
+      loadingController = await startAnimatedLoading(sessionId, chatId, 'Gerando relatório', 12, 2000);
+    }
 
     let data;
     
@@ -57,6 +66,14 @@ class ReportService {
     const filepath = path.join(this.reportsPath, filename);
 
     await fs.writeFile(filepath, html, 'utf-8');
+
+    // Finish loading at 100% and send completion message
+    if (loadingController) {
+      await loadingController.finishLoading();
+    }
+    if (sessionId && chatId) {
+      await sendCompletionMessage(sessionId, chatId, 'Relatório', true);
+    }
 
     return {
       filepath,

@@ -681,7 +681,9 @@ class MaterialSearchService {
         material: null,
         cor: cor || null,  // Passa a cor para buscar por nome
         espessura: espessura || null,
-        tipo: tipo === 'chapa' ? 'chapa' : tipo === 'retalho' ? 'retalho' : 'ambos'
+        tipo: tipo === 'chapa' ? 'chapa' : tipo === 'retalho' ? 'retalho' : 'ambos',
+        sessionId: sessionId,
+        chatId: from
       });
 
       return {
@@ -708,7 +710,9 @@ class MaterialSearchService {
     // Sempre gera a lista, com ou sem espessura
     try {
       const list = await materialListService.generateMaterialList({
-        espessura: espessura || null
+        espessura: espessura || null,
+        sessionId: sessionId,
+        chatId: from
       });
 
       const summaryText = espessura 

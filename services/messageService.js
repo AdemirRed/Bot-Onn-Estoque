@@ -30,9 +30,55 @@ async function sendTextMessage(sessionId, chatId, message) {
       }
     );
     
+    console.log('📤 sendTextMessage - Resposta da API:', JSON.stringify(response.data, null, 2));
+    
     return response.data;
   } catch (error) {
     console.error(`❌ Erro ao enviar mensagem:`, error.message);
+    throw error;
+  }
+}
+
+/**
+ * Edita uma mensagem já enviada
+ * @param {string} sessionId - ID da sessão
+ * @param {string} chatId - ID do chat (número@c.us)
+ * @param {string} messageId - ID da mensagem a editar
+ * @param {string} newContent - Novo conteúdo da mensagem
+ * @returns {Promise<Object>} Resposta da API
+ */
+async function editMessage(sessionId, chatId, messageId, newContent) {
+  try {
+    console.log('✏️ Editando mensagem...');
+    console.log('   Session:', sessionId);
+    console.log('   Chat:', chatId);
+    console.log('   Message ID:', messageId);
+    console.log('   Novo conteúdo:', newContent.substring(0, 50) + '...');
+    
+    const response = await axios.post(
+      `${config.whatsappApiUrl}/message/edit/${sessionId}`,
+      {
+        chatId: chatId,
+        messageId: messageId,
+        newContent: newContent
+      },
+      {
+        headers: {
+          'x-api-key': config.apiKey,
+          'Content-Type': 'application/json'
+        }
+      }
+    );
+    
+    console.log('✅ editMessage - Resposta da API:', JSON.stringify(response.data, null, 2));
+    
+    return response.data;
+  } catch (error) {
+    console.error(`❌ Erro ao editar mensagem:`, error.message);
+    if (error.response) {
+      console.error('   Status:', error.response.status);
+      console.error('   Data:', JSON.stringify(error.response.data, null, 2));
+    }
     throw error;
   }
 }
@@ -156,6 +202,7 @@ async function sendDocument(sessionId, chatId, filepath, caption = '') {
 
 module.exports = {
   sendTextMessage,
+  editMessage,
   replyToMessage,
   sendTyping,
   sendDocument

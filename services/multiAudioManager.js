@@ -75,10 +75,16 @@ class MultiAudioManager {
     const transcriptionService = require('./transcriptionService');
     const messageService = require('./messageService');
     const materialSearchService = require('./materialSearchService');
+    const { startAnimatedLoading, sendCompletionMessage } = require('../utils/loadingIndicator');
 
     try {
       const transcriptions = [];
       let hasError = false;
+
+      // Start animated loading and WAIT for first message
+      console.log(`📤 Enviando mensagem de loading para ${userId}...`);
+      const loadingController = await startAnimatedLoading(sessionId, userId, `Transcrevendo ${audioCount} áudio(s)`, 20, 2500);
+      console.log(`✅ Loading controller criado, iniciando transcrições...`);
 
       // Transcreve todos os áudios
       for (let i = 0; i < audios.length; i++) {
@@ -86,16 +92,6 @@ class MultiAudioManager {
         
         try {
           console.log(`🎤 Transcrevendo áudio ${i + 1}/${audioCount}...`);
-          
-          // Envia resposta inicial apenas no primeiro áudio
-          if (i === 0) {
-            await messageService.replyToMessage(
-              sessionId,
-              userId,
-              messageId,
-              `🎤 Transcrevendo ${audioCount} áudio(s)... Aguarde alguns segundos.`
-            );
-          }
 
           const transcription = await transcriptionService.transcribeAudioById(messageId);
           if (transcription) {
@@ -113,6 +109,10 @@ class MultiAudioManager {
 
       // Se teve transcrições bem-sucedidas
       if (transcriptions.length > 0) {
+        // Finish loading at 100% before sending result
+        await loadingController.finishLoading();
+        await sendCompletionMessage(sessionId, userId, 'Transcrição', true);
+        
         // Formata todas as transcrições
         let fullMessage = `📝 *Transcrição de ${transcriptions.length} áudio(s):*\n\n`;
         
@@ -144,6 +144,8 @@ class MultiAudioManager {
 
       } else if (hasError) {
         // Todos falharam
+        await loadingController.finishLoading();
+        await sendCompletionMessage(sessionId, userId, 'Transcrição', false);
         await messageService.sendTextMessage(
           sessionId,
           userId,
