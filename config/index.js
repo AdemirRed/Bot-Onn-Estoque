@@ -33,5 +33,13 @@ module.exports = {
   // Diretórios do banco de dados
   databasePath: process.env.DATABASE_PATH || 'C:\\CC_DATA_BASE',
   materialsFolder: process.env.MATERIALS_FOLDER || 'MAT',
-  chapasFolder: process.env.CHAPAS_FOLDER || 'CHP'
+  chapasFolder: process.env.CHAPAS_FOLDER || 'CHP',
+  
+  // Sistema de alertas de estoque mínimo
+  minStockQuantity: parseInt(process.env.QTD_MIN_CHP) || 15,
+  alertRecipients: process.env.ALERT_RECIPIENTS 
+    ? process.env.ALERT_RECIPIENTS.split(',').map(s => s.trim())
+    : ['555131026660@c.us', '555199326748@c.us', '555197756708@c.us'],
+  alertSessionId: process.env.ALERT_SESSION || 'ademir',
+  alertSchedule: process.env.ALERT_SCHEDULE || '0 8 * * *' // 8h da manhã todos os dias
 };

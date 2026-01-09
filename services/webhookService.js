@@ -8,6 +8,7 @@ const transcriptionService = require('./transcriptionService');
 const materialSearchService = require('./materialSearchService');
 const messageService = require('./messageService');
 const multiAudioManager = require('./multiAudioManager');
+const stockAlertService = require('./stockAlertService');
 
 // Inicializa com as sessões do .env
 let sessionFilters = [...config.monitoredSessions];
@@ -138,6 +139,57 @@ function logWebhookEvent(sessionId, eventType, data) {
         // Processa em background para não bloquear webhook
         setTimeout(async () => {
           try {
+            // Verifica se é um comando de alerta primeiro
+            const messageAnalyzer = require('./messageAnalyzerService');
+            const analysis = messageAnalyzer.analyzeMessage(msgData.body);
+            
+            if (analysis.isAlertCommand) {
+              console.log(`│ 🔔 Comando de alerta detectado: ${analysis.commandType}`);
+              let response;
+              
+              switch (analysis.commandType) {
+                case 'numericResponse':
+                  response = await stockAlertService.processNumericResponse(analysis.optionNumber, analysis.codigo, sessionId, msgData.from);
+                  break;
+                case 'confirmPurchase':
+                  response = await stockAlertService.confirmPurchase(analysis.codigo, sessionId, msgData.from);
+                  break;
+                case 'addMaterial':
+                  response = await stockAlertService.addMaterial(analysis.codigo, analysis.nome, sessionId, msgData.from);
+                  break;
+                case 'removeMaterial':
+                  response = await stockAlertService.removeMaterial(analysis.codigo, sessionId, msgData.from);
+                  break;
+                case 'listAlerts':
+                  response = await stockAlertService.listMonitoredMaterials(sessionId, msgData.from);
+                  break;
+                case 'changeMinimum':
+                  response = await stockAlertService.changeMinimumQuantity(analysis.newMinimum, sessionId, msgData.from, analysis.codigo);
+                  break;
+                case 'helpAlerts':
+                  response = stockAlertService.getHelpMessage();
+                  break;
+                case 'checkNow':
+                  response = await stockAlertService.checkNowCommand(sessionId, msgData.from);
+                  break;
+                default:
+                  response = { success: false, message: 'Comando não reconhecido.' };
+              }
+              
+              if (response && response.message) {
+                const alertKey = `${sessionId}:${msgData.from}:${response.message}`;
+                sentMessagesCache.set(alertKey, Date.now());
+                
+                if (messageId) {
+                  await messageService.replyToMessage(sessionId, msgData.from, messageId, response.message);
+                } else {
+                  await messageService.sendTextMessage(sessionId, msgData.from, response.message);
+                }
+                console.log(`│ ✅ Resposta de alerta enviada para ${msgData.from}`);
+              }
+              return; // Não processa como busca de material
+            }
+            
             // Envia "digitando..."
             await messageService.sendTyping(sessionId, msgData.from);
             

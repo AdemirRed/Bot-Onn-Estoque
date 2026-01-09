@@ -1,0 +1,49 @@
+{
+  "materials": [
+    {
+      "codigo": "6",
+      "nome": "Branco Liso 18mm",
+      "enabled": true,
+      "autoAddOnPurchase": true,
+      "autoAddQuantity": 33,
+      "autoAddLines": 7,
+      "notes": "Vem em pallet, adiciona 33 chapas em 7 linhas automaticamente"
+    },
+    {
+      "codigo": "24",
+      "nome": "Branco Liso 6mm",
+      "enabled": true,
+      "autoAddOnPurchase": false,
+      "autoAddQuantity": 0,
+      "autoAddLines": 0,
+      "notes": "Adicionar quantidade manualmente após compra"
+    },
+    {
+      "codigo": "33",
+      "nome": "branco liso 15mm",
+      "enabled": true,
+      "autoAddOnPurchase": false,
+      "autoAddQuantity": 0,
+      "autoAddLines": 0,
+      "notes": "Adicionar quantidade manualmente após compra"
+    },
+    {
+      "codigo": "37",
+      "nome": "BRANCO LISO 0.9mm",
+      "enabled": true,
+      "autoAddOnPurchase": false,
+      "autoAddQuantity": 0,
+      "autoAddLines": 0,
+      "notes": "Adicionar quantidade manualmente após compra"
+    },
+    {
+      "codigo": "32",
+      "nome": "MDF CRU 3mm",
+      "enabled": true,
+      "autoAddOnPurchase": false,
+      "autoAddQuantity": 0,
+      "autoAddLines": 0,
+      "notes": "Adicionar quantidade manualmente após compra"
+    }
+  ]
+}
