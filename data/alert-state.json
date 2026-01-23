@@ -2,22 +2,22 @@
   "alerts": [
     {
       "codigo": "6",
-      "lastAlertDate": "2026-01-09",
-      "currentQuantity": 15,
-      "purchaseConfirmed": true,
-      "purchaseConfirmedDate": "2026-01-09T12:39:24.215Z"
-    },
-    {
-      "codigo": "24",
-      "lastAlertDate": "2026-01-09",
-      "currentQuantity": 9,
+      "lastAlertDate": "2026-01-14",
+      "currentQuantity": 37,
       "purchaseConfirmed": false,
       "purchaseConfirmedDate": null
     },
     {
+      "codigo": "24",
+      "lastAlertDate": "2026-01-23",
+      "currentQuantity": 5,
+      "purchaseConfirmed": true,
+      "purchaseConfirmedDate": "2026-01-23T11:52:35.072Z"
+    },
+    {
       "codigo": "33",
-      "lastAlertDate": "2026-01-09",
-      "currentQuantity": 3,
+      "lastAlertDate": "2026-01-16",
+      "currentQuantity": 4,
       "purchaseConfirmed": false,
       "purchaseConfirmedDate": null
     },

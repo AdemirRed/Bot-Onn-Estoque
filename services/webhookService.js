@@ -180,12 +180,25 @@ function logWebhookEvent(sessionId, eventType, data) {
                 const alertKey = `${sessionId}:${msgData.from}:${response.message}`;
                 sentMessagesCache.set(alertKey, Date.now());
                 
-                if (messageId) {
-                  await messageService.replyToMessage(sessionId, msgData.from, messageId, response.message);
-                } else {
-                  await messageService.sendTextMessage(sessionId, msgData.from, response.message);
+                try {
+                  if (messageId) {
+                    try {
+                      await messageService.replyToMessage(sessionId, msgData.from, messageId, response.message);
+                    } catch (replyError) {
+                      console.log(`│ ⚠️  Falha ao responder mensagem, enviando como mensagem normal`);
+                      await messageService.sendTextMessage(sessionId, msgData.from, response.message);
+                    }
+                  } else {
+                    await messageService.sendTextMessage(sessionId, msgData.from, response.message);
+                  }
+                  console.log(`│ ✅ Resposta de alerta enviada para ${msgData.from}`);
+                } catch (sendError) {
+                  console.error(`│ ❌ Erro ao enviar resposta de alerta:`, sendError.message);
+                  if (sendError.response) {
+                    console.error(`│    Status: ${sendError.response.status}`);
+                    console.error(`│    Data:`, JSON.stringify(sendError.response.data, null, 2));
+                  }
                 }
-                console.log(`│ ✅ Resposta de alerta enviada para ${msgData.from}`);
               }
               return; // Não processa como busca de material
             }
@@ -206,13 +219,27 @@ function logWebhookEvent(sessionId, eventType, data) {
               const greetingKey = `${sessionId}:${msgData.from}:${firstResult.message}`;
               sentMessagesCache.set(greetingKey, Date.now());
               
-              // Responde a mensagem original
-              if (messageId) {
-                await messageService.replyToMessage(sessionId, msgData.from, messageId, firstResult.message);
-              } else {
-                await messageService.sendTextMessage(sessionId, msgData.from, firstResult.message);
+              try {
+                // Responde a mensagem original
+                if (messageId) {
+                  try {
+                    await messageService.replyToMessage(sessionId, msgData.from, messageId, firstResult.message);
+                  } catch (replyError) {
+                    console.log(`│ ⚠️  Falha ao responder mensagem, enviando como mensagem normal`);
+                    await messageService.sendTextMessage(sessionId, msgData.from, firstResult.message);
+                  }
+                } else {
+                  await messageService.sendTextMessage(sessionId, msgData.from, firstResult.message);
+                }
+                console.log(`│ ✅ Saudação enviada para ${msgData.from}`);
+              } catch (sendError) {
+                console.error(`│ ❌ Erro ao enviar saudação:`, sendError.message);
+                if (sendError.response) {
+                  console.error(`│    Status: ${sendError.response.status}`);
+                  console.error(`│    Data:`, JSON.stringify(sendError.response.data, null, 2));
+                }
+                return; // Não continua se falhar
               }
-              console.log(`│ ✅ Saudação enviada para ${msgData.from}`);
 
               // Aguarda um pouco e envia "digitando..." novamente
               await new Promise(resolve => setTimeout(resolve, 1000));
@@ -229,13 +256,26 @@ function logWebhookEvent(sessionId, eventType, data) {
                 const followUpKey = `${sessionId}:${msgData.from}:${followUp.message}`;
                 sentMessagesCache.set(followUpKey, Date.now());
                 
-                // Responde a mensagem original
-                if (messageId) {
-                  await messageService.replyToMessage(sessionId, msgData.from, messageId, followUp.message);
-                } else {
-                  await messageService.sendTextMessage(sessionId, msgData.from, followUp.message);
+                try {
+                  // Responde a mensagem original
+                  if (messageId) {
+                    try {
+                      await messageService.replyToMessage(sessionId, msgData.from, messageId, followUp.message);
+                    } catch (replyError) {
+                      console.log(`│ ⚠️  Falha ao responder mensagem, enviando como mensagem normal`);
+                      await messageService.sendTextMessage(sessionId, msgData.from, followUp.message);
+                    }
+                  } else {
+                    await messageService.sendTextMessage(sessionId, msgData.from, followUp.message);
+                  }
+                  console.log(`│ ✅ Resposta enviada para ${msgData.from}`);
+                } catch (sendError) {
+                  console.error(`│ ❌ Erro ao enviar resposta:`, sendError.message);
+                  if (sendError.response) {
+                    console.error(`│    Status: ${sendError.response.status}`);
+                    console.error(`│    Data:`, JSON.stringify(sendError.response.data, null, 2));
+                  }
                 }
-                console.log(`│ ✅ Resposta enviada para ${msgData.from}`);
               }
             } else {
               // Resultado normal — envia a resposta
@@ -251,9 +291,17 @@ function logWebhookEvent(sessionId, eventType, data) {
                     console.log(`│ 📄 ${docType} enviado para ${msgData.from}`);
                   } catch (error) {
                     console.error(`│ ❌ Erro ao enviar documento:`, error.message);
+                    if (error.response) {
+                      console.error(`│    Status: ${error.response.status}`);
+                      console.error(`│    Data:`, JSON.stringify(error.response.data, null, 2));
+                    }
                     // Se falhar e tiver mensagem, envia como texto
                     if (firstResult.message) {
-                      await messageService.sendTextMessage(sessionId, msgData.from, firstResult.message);
+                      try {
+                        await messageService.sendTextMessage(sessionId, msgData.from, firstResult.message);
+                      } catch (textError) {
+                        console.error(`│ ❌ Erro ao enviar texto alternativo:`, textError.message);
+                      }
                     }
                   }
                 } else if (firstResult.message) {
@@ -261,18 +309,39 @@ function logWebhookEvent(sessionId, eventType, data) {
                   const messageKey = `${sessionId}:${msgData.from}:${firstResult.message}`;
                   sentMessagesCache.set(messageKey, Date.now());
                   
-                  // Responde a mensagem original
-                  if (messageId) {
-                    await messageService.replyToMessage(sessionId, msgData.from, messageId, firstResult.message);
-                  } else {
-                    await messageService.sendTextMessage(sessionId, msgData.from, firstResult.message);
+                  try {
+                    // Responde a mensagem original
+                    if (messageId) {
+                      try {
+                        await messageService.replyToMessage(sessionId, msgData.from, messageId, firstResult.message);
+                      } catch (replyError) {
+                        console.log(`│ ⚠️  Falha ao responder mensagem, enviando como mensagem normal`);
+                        await messageService.sendTextMessage(sessionId, msgData.from, firstResult.message);
+                      }
+                    } else {
+                      await messageService.sendTextMessage(sessionId, msgData.from, firstResult.message);
+                    }
+                    console.log(`│ ✅ Resposta enviada para ${msgData.from}`);
+                  } catch (sendError) {
+                    console.error(`│ ❌ Erro ao enviar resposta:`, sendError.message);
+                    if (sendError.response) {
+                      console.error(`│    Status: ${sendError.response.status}`);
+                      console.error(`│    Data:`, JSON.stringify(sendError.response.data, null, 2));
+                    }
                   }
-                  console.log(`│ ✅ Resposta enviada para ${msgData.from}`);
                 }
               }
             }
           } catch (error) {
             console.error(`│ ❌ Erro ao processar mensagem:`, error.message);
+            if (error.response) {
+              console.error(`│    Status HTTP: ${error.response.status}`);
+              console.error(`│    Status Text: ${error.response.statusText}`);
+              console.error(`│    Dados da resposta:`, JSON.stringify(error.response.data, null, 2));
+            }
+            if (error.stack) {
+              console.error(`│    Stack trace:`, error.stack);
+            }
           }
         }, 500);
       }
