@@ -574,8 +574,8 @@ function setupWebhookListeners(sessionId, client) {
  * @returns {boolean}
  */
 function shouldProcessChat(chatId) {
-  // Identifica se é grupo (contém "-" no ID) ou contato privado
-  const isGroup = chatId.includes('-');
+  // Identifica se é grupo (@g.us) ou contato privado (@c.us)
+  const isGroup = chatId.endsWith('@g.us') || chatId.includes('-');
   
   if (isGroup) {
     // Para grupos: verifica lista de grupos permitidos

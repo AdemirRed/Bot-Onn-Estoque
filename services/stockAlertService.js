@@ -198,8 +198,8 @@ class StockAlertService {
       const state = this.getOrCreateAlertState(material.codigo);
       state.currentQuantity = stockInfo.quantity;
       
-      // Se estoque OK, limpar flag de compra confirmada
-      if (!stockInfo.belowMinimum && !stockInfo.isAtMinimum) {
+      // Se estoque OK (no mínimo ou acima), limpar flag de compra confirmada
+      if (!stockInfo.belowMinimum) {
         if (state.purchaseConfirmed) {
           console.log(`✅ Material ${material.codigo} voltou ao estoque normal. Resetando flag de compra.`);
           state.purchaseConfirmed = false;
@@ -208,7 +208,7 @@ class StockAlertService {
         continue;
       }
       
-      // Se estoque baixo ou no mínimo, verificar se deve alertar
+      // Se estoque baixo, verificar se deve alertar
       if (this.shouldSendAlert(state)) {
         alertsToSend.push({ material, stockInfo, state });
       } else {
@@ -309,6 +309,8 @@ class StockAlertService {
         if (result) {
           // Verifica estoque atualizado
           const stockInfo = await this.checkMaterialStock(material);
+          const recommended = material.recommendedStock ?? stockInfo.minQuantity;
+          const missingToRecommended = Math.max(0, recommended - stockInfo.quantity);
           
           message += `🔄 *Estoque atualizado automaticamente!*\n\n`;
           message += `📊 *Detalhes:*\n`;
@@ -316,6 +318,9 @@ class StockAlertService {
           message += `• Adicionadas: ${material.autoAddQuantity} chapas\n`;
           message += `• Quantidade atual: *${stockInfo.quantity} chapas*\n`;
           message += `• Arquivo: CHP${codigo.padStart(5, '0')}.TAB\n\n`;
+          message += missingToRecommended > 0
+            ? `📌 Faltam *${missingToRecommended} chapas* para atingir o recomendado (${recommended}).\n\n`
+            : `✅ Estoque recomendado atingido (${recommended} chapas).\n\n`;
         } else {
           message += `⚠️ *Erro ao atualizar estoque automaticamente.*\n`;
           message += `Por favor, adicione manualmente ${material.autoAddQuantity} chapas.\n\n`;
@@ -325,7 +330,13 @@ class StockAlertService {
         message += `Por favor, adicione manualmente ${material.autoAddQuantity} chapas.\n\n`;
       }
     } else {
-      message += `⚠️ *Lembre-se de atualizar o estoque manualmente!*\n\n`;
+      const stockInfo = await this.checkMaterialStock(material);
+      const recommended = material.recommendedStock ?? stockInfo.minQuantity;
+      const missingToRecommended = Math.max(0, recommended - stockInfo.quantity);
+      message += `⚠️ *Lembre-se de atualizar o estoque manualmente!*\n`;
+      message += missingToRecommended > 0
+        ? `📌 Faltam *${missingToRecommended} chapas* para atingir o recomendado (${recommended}).\n\n`
+        : `✅ Estoque recomendado atingido (${recommended} chapas).\n\n`;
     }
     
     message += `Os alertas foram pausados para este material até que o estoque volte ao normal.`;
@@ -388,6 +399,9 @@ class StockAlertService {
                  `Verifique o código e tente novamente.`
       };
     }
+
+    // Lê quantidade mínima do arquivo .INI
+    const minQty = await corteCertoService.getMinStockQuantity(codigo);
     
     const newMaterial = {
       codigo,
@@ -396,14 +410,12 @@ class StockAlertService {
       autoAddOnPurchase: false,
       autoAddQuantity: 0,
       autoAddLines: 0,
+      recommendedStock: minQty,
       notes: 'Adicionar quantidade manualmente após compra'
     };
     
     this.monitoredMaterials.push(newMaterial);
     await this.saveMonitoredMaterials();
-    
-    // Lê quantidade mínima do arquivo .INI
-    const minQty = await corteCertoService.getMinStockQuantity(codigo);
     
     return {
       success: true,
@@ -411,7 +423,8 @@ class StockAlertService {
                `📦 Nome: *${newMaterial.nome}*\n` +
                `🔢 Código: ${codigo}\n` +
                `⚙️ Status: Ativo\n` +
-               `📊 Mínimo: ${minQty} chapas (do arquivo .INI)\n\n` +
+               `📊 Mínimo: ${minQty} chapas (do arquivo .INI)\n` +
+               `📌 Recomendado: ${newMaterial.recommendedStock} chapas\n\n` +
                `O material será verificado diariamente.\n\n` +
                `💡 Use \`/minimo ${codigo} [quantidade]\` para alterar o mínimo.`
     };
@@ -483,11 +496,13 @@ class StockAlertService {
       
       // Lê quantidade mínima do arquivo .INI
       const minQty = stockInfo?.minQuantity || config.minStockQuantity;
+      const recommended = material.recommendedStock ?? minQty;
       
       message += `${emoji} *${material.nome}*\n`;
       message += `• Código: ${material.codigo}\n`;
       message += `• Quantidade: ${stockInfo?.quantity || 0} chapas\n`;
       message += `• Mínimo: ${minQty} chapas (arquivo .INI)\n`;
+      message += `• Recomendado: ${recommended} chapas\n`;
       message += `• Status: ${material.enabled ? '✅ Ativo' : '❌ Inativo'}\n`;
       
       if (state.purchaseConfirmed) {

@@ -27,7 +27,7 @@ module.exports = {
   // Controle de grupos e contatos
   allowedGroups: process.env.ALLOWED_GROUPS 
     ? process.env.ALLOWED_GROUPS.split(',').map(s => s.trim()).filter(s => s.length > 0)
-    : null, // null = todos os grupos permitidos
+    : [], // [] = nenhum grupo permitido (para permitir todos, use null ou configure ALLOWED_GROUPS)
   allowPrivateChats: process.env.ALLOW_PRIVATE_CHATS === 'true',
   
   // Diretórios do banco de dados

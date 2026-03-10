@@ -2,36 +2,36 @@
   "alerts": [
     {
       "codigo": "6",
-      "lastAlertDate": "2026-01-14",
-      "currentQuantity": 37,
-      "purchaseConfirmed": false,
-      "purchaseConfirmedDate": null
+      "lastAlertDate": "2026-03-10",
+      "currentQuantity": 3,
+      "purchaseConfirmed": true,
+      "purchaseConfirmedDate": "2026-03-10T11:01:33.139Z"
     },
     {
       "codigo": "24",
-      "lastAlertDate": "2026-01-23",
-      "currentQuantity": 5,
-      "purchaseConfirmed": true,
-      "purchaseConfirmedDate": "2026-01-23T11:52:35.072Z"
-    },
-    {
-      "codigo": "33",
-      "lastAlertDate": "2026-01-16",
-      "currentQuantity": 4,
+      "lastAlertDate": "2026-03-10",
+      "currentQuantity": 8,
       "purchaseConfirmed": false,
       "purchaseConfirmedDate": null
     },
     {
+      "codigo": "33",
+      "lastAlertDate": "2026-03-10",
+      "currentQuantity": 4,
+      "purchaseConfirmed": true,
+      "purchaseConfirmedDate": "2026-03-10T11:01:45.545Z"
+    },
+    {
       "codigo": "37",
-      "lastAlertDate": null,
-      "currentQuantity": 6,
+      "lastAlertDate": "2026-03-04",
+      "currentQuantity": 8,
       "purchaseConfirmed": false,
       "purchaseConfirmedDate": null
     },
     {
       "codigo": "32",
-      "lastAlertDate": null,
-      "currentQuantity": 6,
+      "lastAlertDate": "2026-02-24",
+      "currentQuantity": 9,
       "purchaseConfirmed": false,
       "purchaseConfirmedDate": null
     }

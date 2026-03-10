@@ -7,6 +7,7 @@
       "autoAddOnPurchase": true,
       "autoAddQuantity": 33,
       "autoAddLines": 7,
+      "recommendedStock": 33,
       "notes": "Vem em pallet, adiciona 33 chapas em 7 linhas automaticamente"
     },
     {
@@ -16,6 +17,7 @@
       "autoAddOnPurchase": false,
       "autoAddQuantity": 0,
       "autoAddLines": 0,
+      "recommendedStock": 15,
       "notes": "Adicionar quantidade manualmente após compra"
     },
     {
@@ -25,6 +27,7 @@
       "autoAddOnPurchase": false,
       "autoAddQuantity": 0,
       "autoAddLines": 0,
+      "recommendedStock": 5,
       "notes": "Adicionar quantidade manualmente após compra"
     },
     {
@@ -34,6 +37,7 @@
       "autoAddOnPurchase": false,
       "autoAddQuantity": 0,
       "autoAddLines": 0,
+      "recommendedStock": 5,
       "notes": "Adicionar quantidade manualmente após compra"
     },
     {
@@ -43,6 +47,7 @@
       "autoAddOnPurchase": false,
       "autoAddQuantity": 0,
       "autoAddLines": 0,
+      "recommendedStock": 5,
       "notes": "Adicionar quantidade manualmente após compra"
     }
   ]

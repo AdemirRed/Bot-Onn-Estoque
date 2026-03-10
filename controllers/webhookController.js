@@ -65,8 +65,11 @@ function receiveWebhook(req, res) {
   */
   
   // Log para debug - ver o que está chegando
-  // Descomente para ver o formato completo:
-  console.log('📥 [DEBUG] Webhook recebido:', JSON.stringify(req.body, null, 2));
+  console.log('\n═══════════════════════════════════════════════════════════');
+  console.log('📥 [WEBHOOK] Recebido em:', new Date().toLocaleString('pt-BR'));
+  console.log('📥 [WEBHOOK] Headers:', JSON.stringify(req.headers, null, 2));
+  console.log('📥 [WEBHOOK] Body:', JSON.stringify(req.body, null, 2));
+  console.log('═══════════════════════════════════════════════════════════\n');
   
   try {
     // A API pode enviar em diferentes formatos, vamos aceitar todos
